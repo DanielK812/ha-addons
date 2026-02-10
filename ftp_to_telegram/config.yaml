@@ -1,0 +1,38 @@
+name: "FTP to Telegram"
+version: "1.0.0"
+slug: "ftp_to_telegram"
+description: "Überwacht FTP-Aufnahmen, konvertiert sie und sendet sie an Telegram."
+startup: services
+boot: auto
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+image: "local/ftp_to_telegram"
+map:
+  - "config:rw"
+host_network: true
+
+# Hier definierst du die Standardwerte (Defaults)
+options:
+  ftp_host: ""
+  ftp_user: ""
+  ftp_pass: ""
+  ftp_port: 21
+  bot_token: ""
+  chat_id: ""
+  target_fps: 30
+  delete_after_success: false
+
+# Hier definierst du, wie die Eingabefelder aussehen (Typen)
+schema:
+  ftp_host: str
+  ftp_user: str
+  ftp_pass: password
+  ftp_port: int
+  bot_token: password
+  chat_id: str
+  target_fps: int
+  delete_after_success: bool

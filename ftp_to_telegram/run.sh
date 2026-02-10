@@ -1,14 +1,20 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/with-contenv bashio
 
-# Set defaults from config
-export FTP_HOST="${FTP_HOST:-""}"
-export FTP_USER="${FTP_USER:-""}"
-export FTP_PASS="${FTP_PASS:-""}"
-export FTP_PORT="${FTP_PORT:-"21"}"
-export BOT_TOKEN="${BOT_TOKEN:-""}"
-export CHAT_ID="${CHAT_ID:-""}"
-export TARGET_FPS="${TARGET_FPS:-"0"}"
-export DELETE_AFTER_SUCCESS="${DELETE_AFTER_SUCCESS:-"false"}"
+echo "Starte FTP to Telegram Bridge..."
 
-python ./ftp_to_telegram.py
+# 1. Werte aus der Home Assistant Config (options.json) auslesen
+# 2. Als Environment-Variable exportieren (Großschreibung für Python)
+
+export FTP_HOST=$(bashio::config 'ftp_host')
+export FTP_USER=$(bashio::config 'ftp_user')
+export FTP_PASS=$(bashio::config 'ftp_pass')
+export FTP_PORT=$(bashio::config 'ftp_port')
+
+export BOT_TOKEN=$(bashio::config 'bot_token')
+export CHAT_ID=$(bashio::config 'chat_id')
+
+export TARGET_FPS=$(bashio::config 'target_fps')
+export DELETE_AFTER_SUCCESS=$(bashio::config 'delete_after_success')
+
+# Startet dein Python-Programm
+python3 /ftp_to_telegram.py
