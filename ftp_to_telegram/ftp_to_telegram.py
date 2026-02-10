@@ -25,6 +25,14 @@ ALLOWED_EXTS = ('.250', '.265')  # akzeptierte Quelldateiendungen
 TARGET_FPS = None
 
 
+def format_fps_value(fps):
+    if fps is None:
+        return '25'
+    if abs(fps - round(fps)) < 1e-3:
+        return str(int(round(fps)))
+    return f"{fps:.3f}"
+
+
 def get_env(name, required=True, default=None):
     val = os.environ.get(name, default)
     if required and (val is None or val == ''):
@@ -43,19 +51,33 @@ def connect_ftp(host, user, passwd, port=None):
     return ftp
 
 
-def list_files_in_record(ftp):
-    today = datetime.now().strftime('%Y%m%d')
-    path = f"/{today}/record/"
+def list_day_directories(ftp):
+    try:
+        ftp.cwd('/')
+        entries = ftp.nlst()
+    except Exception as e:
+        print(f"Fehler beim Auflisten der Root-Verzeichnisse: {e}")
+        return []
+    dirs = [entry for entry in entries if entry.isdigit()]
+    dirs.sort()
+    if dirs:
+        print(f"Gefundene Tagesordner (chronologisch): {dirs}")
+    else:
+        print("Keine Tagesverzeichnisse gefunden.")
+    return dirs
+
+
+def list_files_in_record(ftp, day):
+    path = f"/{day}/record/"
     print(f"Versuche, FTP-Verzeichnis zu wechseln: {path}")
     try:
         ftp.cwd(path)
     except Exception as e:
         print(f"Fehler beim Wechseln in Verzeichnis {path}: {e}")
         return []
-    # erfolgreich gewechselt
     print(f"Überwache FTP-Verzeichnis: {path}")
     try:
-        files = ftp.nlst()
+        files = sorted(ftp.nlst())
     except Exception as e:
         print(f"Fehler beim Auflisten von Dateien in {path}: {e}")
         return []
@@ -98,20 +120,19 @@ def convert_250_to_mp4(src_path, dst_path):
         except Exception:
             return None
 
-    print('Ermittle Frame-Rate via ffprobe (oder verwende TARGET_FPS wenn gesetzt)...')
-    fps = probe_fps(src_path)
+    print('Ermittle Frame-Rate via ffprobe (oder wende TARGET_FPS an)...')
+    detected_fps = probe_fps(src_path)
+    fps_source = 'automatisch'
+    preferred_fps = None
     if TARGET_FPS and int(TARGET_FPS) > 0:
-        fps_val = float(TARGET_FPS)
-        fps_str = str(int(fps_val))
-        print(f'Ziel-FPS (TARGET_FPS) verwendet: {fps_str} fps')
+        preferred_fps = float(int(TARGET_FPS))
+        fps_source = 'konfiguriert'
+    elif detected_fps:
+        preferred_fps = detected_fps
     else:
-        if fps:
-            # runden, aber behalte eine formatierbare Zahl
-            fps_str = f"{fps:.3f}" if fps < 1000 else str(int(round(fps)))
-            print(f'Erkannte Bildrate: {fps} -> {fps_str} fps')
-        else:
-            fps_str = '25'
-            print('Konnte Bildrate nicht ermitteln, verwende Default:', fps_str)
+        preferred_fps = 25.0
+    fps_str = format_fps_value(preferred_fps)
+    print(f'Frame-Rate ({fps_source}): {fps_str} fps (detected: {detected_fps})')
 
     # ermittele, ob die Quelle eine Audiospur hat
     def probe_has_audio(path):
@@ -141,7 +162,7 @@ def convert_250_to_mp4(src_path, dst_path):
     # Wenn Audio vorhanden ist, enkodiere zu AAC; sonst explizit ohne Audio (-an)
     cmd_recode += [
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p',
-        '-r', fps_str, '-fps_mode', 'cfr',
+        '-r', fps_str, '-filter:v', f'fps={fps_str}', '-fps_mode', 'cfr',
     ]
     if has_audio:
         cmd_recode += ['-c:a', 'aac', '-b:a', '128k']
@@ -188,8 +209,9 @@ def convert_250_to_mp4(src_path, dst_path):
     out_duration = probe_duration(dst_path)
     print(f'Quell-Frames: {frames}, Ausgabe-Dauer: {out_duration}')
 
-    if frames and out_duration and TARGET_FPS and int(TARGET_FPS) > 0:
-        expected_dur = frames / float(TARGET_FPS)
+    fps_for_duration = preferred_fps if preferred_fps and preferred_fps > 0 else None
+    if frames and out_duration and fps_for_duration:
+        expected_dur = frames / float(fps_for_duration)
         if expected_dur > 0:
             multiplier = expected_dur / out_duration if out_duration > 0 else 1.0
             print(f'Erwartete Dauer: {expected_dur:.3f}s, tatsächliche Dauer: {out_duration:.3f}s, multiplier: {multiplier:.3f}')
@@ -200,7 +222,7 @@ def convert_250_to_mp4(src_path, dst_path):
                 cmd_fix = [
                     'ffmpeg', '-y', '-i', dst_path,
                     '-filter:v', f'setpts=PTS*{multiplier}',
-                    '-r', str(int(TARGET_FPS)), '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p',
+                    '-r', format_fps_value(fps_for_duration), '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p',
                     '-movflags', '+faststart', tmp_fixed
                 ]
                 print('Führe Fix-Command:', cmd_fix)
@@ -288,8 +310,8 @@ def main():
                 time.sleep(10)
                 continue
 
-            files = list_files_in_record(ftp)
-            if not files:
+            day_dirs = list_day_directories(ftp)
+            if not day_dirs:
                 print('Keine Dateien im Record-Verzeichnis gefunden.')
                 try:
                     ftp.quit()
@@ -302,10 +324,15 @@ def main():
             workdir = tempfile.mkdtemp(prefix='ftp_250_')
 
             try:
-                for fname in files:
-                    if not any(fname.lower().endswith(ext) for ext in ALLOWED_EXTS):
+                for day in day_dirs:
+                    files = list_files_in_record(ftp, day)
+                    if not files:
                         continue
-                    if fname in processed:
+                    for fname in files:
+                        if not any(fname.lower().endswith(ext) for ext in ALLOWED_EXTS):
+                            continue
+                        remote_key = f"{day}/record/{fname}"
+                    if remote_key in processed:
                         continue
                     print(f'Bearbeite: {fname}')
                     # Debug: remote file size (wenn verfügbar)
@@ -343,7 +370,7 @@ def main():
                     sent = send_file_telegram(bot_token, chat_id, local_mp4, caption)
                     if sent:
                         print(f'{local_mp4} erfolgreich gesendet.')
-                        processed.add(fname)
+                        processed.add(remote_key)
                         if delete_after:
                             try:
                                 ftp.delete(fname)
