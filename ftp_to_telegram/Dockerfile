@@ -1,26 +1,20 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# 1. Arbeitsverzeichnis setzen
+# Arbeitsverzeichnis
 WORKDIR /app
 
-# 2. Notwendige Pakete installieren (FFmpeg fehlt bei dir!)
-# Python ist im Base-Image schon drin, aber pip und ffmpeg müssen oft dazu.
-RUN apk add --no-cache ffmpeg py3-pip
+# Installiere Python3, Pip und FFmpeg (Wichtig!)
+RUN apk add --no-cache python3 py3-pip ffmpeg
 
-# 3. Python-Bibliotheken installieren
-# --break-system-packages ist bei neueren Python-Versionen in Alpine nötig
+# Installiere Python-Pakete
 RUN pip3 install requests --break-system-packages
 
-# 4. Dateien kopieren
-# WICHTIG: Kopiere run.sh, das ist die Brücke zwischen Home Assistant und Python!
+# Kopiere die Skripte ins Image
 COPY run.sh /
-COPY ftp_to_telegram/ftp_to_telegram.py /app/
+COPY ftp_to_telegram.py /app/
 
-# 5. Ausführbar machen
+# Mache das Start-Skript ausführbar
 RUN chmod a+x /run.sh
 
-# 6. Start-Befehl
-# Nicht direkt Python starten, sondern das run.sh Script,
-# damit die Umgebungsvariablen (Config) geladen werden.
 CMD [ "/run.sh" ]

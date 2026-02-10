@@ -1,7 +1,7 @@
 name: "FTP to Telegram"
-version: "1.0.0"
+version: "1.0.1"
 slug: "ftp_to_telegram"
-description: "Überwacht FTP-Aufnahmen, konvertiert sie und sendet sie an Telegram."
+description: "Lädt Videos vom FTP und sendet sie an Telegram."
 startup: services
 boot: auto
 arch:
