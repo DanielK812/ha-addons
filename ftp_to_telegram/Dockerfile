@@ -4,22 +4,23 @@ FROM $BUILD_FROM
 # 1. Arbeitsverzeichnis
 WORKDIR /app
 
-# 2. Pakete installieren (ffmpeg ist wichtig!)
+# 2. Pakete installieren
 RUN apk add --no-cache python3 py3-pip ffmpeg
 
-# 3. Python-Libs installieren
+# 3. Python-Libs
 RUN pip3 install requests --break-system-packages
 
-# 4. Skripte kopieren
-# WICHTIG: Kopiere das run.sh Script.
-# Kopiere KEINE bashio.sh oder andere Systemdateien, das macht das Base-Image kaputt!
+# 4. Dateien kopieren
 COPY run.sh /
 COPY ftp_to_telegram.py /app/
 
-# 5. Rechte vergeben
+# 5. REPARATUR: Windows-Zeilenumbrüche entfernen (WICHTIG!)
+# Dieser Befehl entfernt unsichtbare "\r" Zeichen aus den Dateien
+RUN sed -i 's/\r$//' /run.sh && \
+    sed -i 's/\r$//' /app/ftp_to_telegram.py
+
+# 6. Ausführbar machen
 RUN chmod a+x /run.sh
 
-# 6. Der Startbefehl (WICHTIG!)
-# Nutze CMD, niemals ENTRYPOINT.
-# Nutze eckige Klammern ["..."], sonst startet eine Shell dazwischen und klaut PID 1.
+# 7. Starten
 CMD [ "/run.sh" ]

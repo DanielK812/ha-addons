@@ -1,8 +1,8 @@
 #!/usr/bin/with-contenv bashio
 
-echo "Starte FTP to Telegram Bridge..."
+# Debug-Ausgabe
+echo "Add-on wird gestartet..."
 
-# Konfiguration auslesen und als Umgebungsvariablen setzen
 export FTP_HOST=$(bashio::config 'ftp_host')
 export FTP_USER=$(bashio::config 'ftp_user')
 export FTP_PASS=$(bashio::config 'ftp_pass')
@@ -12,5 +12,5 @@ export CHAT_ID=$(bashio::config 'chat_id')
 export TARGET_FPS=$(bashio::config 'target_fps')
 export DELETE_AFTER_SUCCESS=$(bashio::config 'delete_after_success')
 
-# Python starten
+echo "Starte Python Script..."
 python3 /app/ftp_to_telegram.py
