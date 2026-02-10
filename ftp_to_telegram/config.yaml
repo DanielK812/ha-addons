@@ -10,12 +10,9 @@ arch:
   - armhf
   - armv7
   - i386
-image: "local/ftp_to_telegram"
 map:
   - "config:rw"
 host_network: true
-
-# Hier definierst du die Standardwerte (Defaults)
 options:
   ftp_host: ""
   ftp_user: ""
@@ -25,8 +22,6 @@ options:
   chat_id: ""
   target_fps: 30
   delete_after_success: false
-
-# Hier definierst du, wie die Eingabefelder aussehen (Typen)
 schema:
   ftp_host: str
   ftp_user: str
