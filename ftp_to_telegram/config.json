@@ -1,0 +1,85 @@
+{
+  "name": "FTP to Telegram",
+  "version": "1.0.0",
+  "slug": "ftp_to_telegram",
+  "description": "Überwacht FTP-Aufnahmen und sendet konvertierte MP4-Dateien an eine Telegram-Gruppe.",
+  "startup": "services",
+  "boot": "auto",
+  "arch": [
+    "amd64",
+    "armv7",
+    "armhf",
+    "aarch64",
+    "arm64",
+    "i386"
+  ],
+  "homeassistant": "0.130.0",
+  "homeassistant_api": true,
+  "startup": "services",
+  "options": {
+    "ftp_host": "",
+    "ftp_user": "",
+    "ftp_pass": "",
+    "ftp_port": 21,
+    "bot_token": "",
+    "chat_id": "",
+    "target_fps": 30,
+    "delete_after_success": false
+  },
+  "schema": [
+    {
+      "name": "ftp_host",
+      "description": "Adresse oder IP des FTP-Servers",
+      "required": true,
+      "selector": {"text": {"multiline": false}}
+    },
+    {
+      "name": "ftp_user",
+      "description": "FTP-Benutzername",
+      "required": true,
+      "selector": {"text": {"multiline": false}}
+    },
+    {
+      "name": "ftp_pass",
+      "description": "FTP-Passwort",
+      "required": true,
+      "selector": {"text": {"multiline": false, "mode": "password"}}
+    },
+    {
+      "name": "ftp_port",
+      "description": "FTP-Port (optional, Standard 21)",
+      "required": false,
+      "selector": {"number": {"min": 1, "max": 65535}}
+    },
+    {
+      "name": "bot_token",
+      "description": "Token des Telegram-Bots, der die Aufnahmen versendet",
+      "required": true,
+      "selector": {"text": {"multiline": false, "mode": "password"}}
+    },
+    {
+      "name": "chat_id",
+      "description": "ID der Telegram-Gruppe oder -Person",
+      "required": true,
+      "selector": {"text": {"multiline": false}}
+    },
+    {
+      "name": "target_fps",
+      "description": "Optional fixe Zielbildrate für ffmpeg (0 = automatisch)",
+      "required": false,
+      "selector": {"number": {"min": 0, "max": 120}}
+    },
+    {
+      "name": "delete_after_success",
+      "description": "Originaldateien nach erfolgreichem Versand auf dem FTP entfernen",
+      "required": false,
+      "selector": {"boolean": {}}
+    }
+  ],
+  "image": "local/ftp_to_telegram",
+  "ports": {},
+  "environment": [],
+  "options_description": "Trage FTP- und Telegram-Verbindungseinrichtungen sowie optionale Ziel-FPS und Löschflag in der Add-on-Oberfläche ein.",
+  "map": ["config:rw"],
+  "host_network": true
+}
